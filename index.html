@@ -273,7 +273,7 @@ allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; pic
     (function() {
         const directLink = "https://omg10.com/4/8632131"; // Reemplaza con tu enlace
         const layer = document.getElementById('click-layer');
-        const intervalInMinutes = 15;
+        const intervalInMinutes = 10;
         const storageKey = 'last_monetag_click';
 
         function shouldShowAd() {
@@ -302,7 +302,7 @@ allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; pic
             // Ocultar la capa para que el usuario navegue tranquilo
             layer.style.display = 'none';
             
-            console.log("Anuncio mostrado. Próxima disponibilidad en 15 min.");
+            console.log("Anuncio mostrado. Próxima disponibilidad en 10 min.");
         });
     })();
 </script>
