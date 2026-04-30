@@ -1,379 +1,218 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>IbraFut Live - Pro Agenda</title>
-
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-
         body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; margin: 0; }
-
         .match-card { border: 1px solid #1e293b; transition: all 0.3s ease; }
-
         .open.match-card { border-color: #22c55e; background: #0f172a; }
-
-        .submenu { display: none; }
-
+        /* Forzamos que el submenú empiece oculto */
+        .submenu { display: none; overflow: hidden; }
         .rotate-icon { transition: transform 0.3s; }
-
         .open .rotate-icon { transform: rotate(180deg); }
-
         .img-container { background: #111827; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-
         .img-event { object-fit: contain; width: 90%; height: 90%; }
-
         .logo-special { filter: drop-shadow(0 0 4px rgba(255,255,255,0.2)); }
-
     </style>
-
 </head>
-
 <body>
 
     <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 p-4 shadow-xl">
-
         <div class="container mx-auto max-w-2xl flex justify-between items-center">
-
             <h1 class="text-xl font-900 text-white tracking-tighter uppercase font-black">IBRAFUT <span class="text-green-500">LIVE</span></h1>
-
             <div id="proxy-indicator" class="text-[9px] bg-slate-800 px-2 py-1 rounded text-slate-400 font-bold uppercase tracking-widest border border-slate-700">Señal: ...</div>
-
         </div>
-
     </header>
 
     <main class="container mx-auto max-w-2xl p-4">
-
         <div id="agenda-date" class="text-center mb-6 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-green-500 text-[10px] font-bold uppercase tracking-widest">
-
             ⚽ Sincronizando horarios...
-
         </div>
 
         <div id="lista-agenda" class="space-y-3">
-
             <div class="flex flex-col items-center justify-center py-20 opacity-50">
-
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-4"></div>
-
                 <p class="text-[10px] uppercase font-bold tracking-[0.2em]">Ordenando agenda...</p>
-
             </div>
-
         </div>
-
     </main>
 
     <script>
-
         $(document).ready(function() {
-
             const API_TARGET = "https://fubolazo.com/agenda.json?v=1.12" + Date.now();
-
             const PROXIES = [
-
                 "https://corsproxy.io/?url=",
-
                 "https://api.allorigins.win/get?url=",
-
                 "https://api.codetabs.com/v1/proxy?quest=",
-
                 "https://thingproxy.freeboard.io/fetch/"
-
             ];
-
             let currentProxyIndex = 0;
 
-           // Busca esta función en tu código actual y reemplázala por esta:
-function prepararEnlace(urlSucia) {
-    if (!urlSucia) return "#";
-    let urlLimpia = urlSucia.replace(/\\\//g, '/');
-    
-    let hash = "";
-    if (urlLimpia.includes("r=")) {
-        hash = urlLimpia.split('r=')[1];
-    } else if (urlLimpia.includes("embed=")) {
-        hash = urlLimpia.split('embed=')[1];
-    }
+            function prepararEnlace(urlSucia) {
+                if (!urlSucia) return "#";
+                let urlLimpia = urlSucia.replace(/\\\//g, '/');
+                let hash = "";
+                if (urlLimpia.includes("r=")) {
+                    hash = urlLimpia.split('r=')[1];
+                } else if (urlLimpia.includes("embed=")) {
+                    hash = urlLimpia.split('embed=')[1];
+                }
 
-    if (hash) {
-        // Redirige al visor seguro que creamos
-        return `https://tiposdisueltos.blogspot.com/p/visor.html?embed=${hash}`;
-    }
-
-    return urlLimpia.startsWith('http') ? urlLimpia : "https://fubolazo.com" + urlLimpia;
-}
+                if (hash) {
+                    return `https://tiposdisueltos.blogspot.com/p/visor.html?embed=${hash}`;
+                }
+                return urlLimpia.startsWith('http') ? urlLimpia : "https://fubolazo.com" + urlLimpia;
+            }
 
             function iniciarCarga() {
-
                 const proxyActual = PROXIES[currentProxyIndex];
-
                 $('#proxy-indicator').text(`BUSCANDO CH ${currentProxyIndex + 1}`).addClass('animate-pulse');
 
                 $.ajax({
-
                     url: proxyActual + encodeURIComponent(API_TARGET),
-
                     type: 'GET',
-
-                    timeout: 3000,
-
+                    timeout: 5000,
                     success: function(response) {
-
                         try {
-
                             let data;
-
                             if (response && response.contents) {
-
                                 data = typeof response.contents === "string" ? JSON.parse(response.contents) : response.contents;
-
                             } else {
-
                                 data = typeof response === "string" ? JSON.parse(response) : response;
-
                             }
-
                             let partidos = data.datos || data.data || [];
-
                             partidos.sort((a, b) => {
-
                                 const hA = (a.atributos?.diary_hour || a.attributes?.diary_hour || "99:99");
-
                                 const hB = (b.atributos?.diary_hour || b.attributes?.diary_hour || "99:99");
-
                                 return hA.localeCompare(hB);
-
                             });
-
                             renderizarHTML(partidos, data);
-
                         } catch (e) { intentarSiguienteProxy(); }
-
                     },
-
                     error: function() { intentarSiguienteProxy(); }
-
                 });
-
             }
 
             function intentarSiguienteProxy() {
-
                 currentProxyIndex++;
-
                 if (currentProxyIndex < PROXIES.length) { iniciarCarga(); }
-
                 else {
-
                     $('#lista-agenda').html('<div class="text-center py-20 text-red-500 text-xs font-bold uppercase tracking-widest">Error de red</div>');
-
                 }
-
             }
 
             const flagMap = {
-
                 "Argentina": "ar", "Brasil": "br", "Bolivia": "bo", "Chile": "cl", "Colombia": "co", 
-
                 "Ecuador": "ec", "Paraguay": "py", "Peru": "pe", "Uruguay": "uy", "Venezuela": "ve",
-
                 "Mexico": "mx", "USA": "us", "Estados Unidos": "us", "Costa Rica": "cr", "Panama": "pa", 
-
                 "España": "es", "England": "gb", "Inglaterra": "gb", "Italia": "it", "Francia": "fr", 
-
                 "Alemania": "de", "Portugal": "pt", "Holanda": "nl", "Paises Bajos": "nl"
-
             };
 
             function renderizarHTML(partidos, dataFull) {
-
                 let fechaTexto = "HOY";
-
                 if (partidos && partidos.length > 0) {
-
                     const pRef = partidos.length > 1 ? partidos[1] : partidos[0];
-
                     const aRef = pRef.atributos || pRef.attributes || {};
-
                     fechaTexto = aRef.date_diary || dataFull.titulo || dataFull.title || "";
-
                 }
 
                 if (!partidos || partidos.length === 0) {
-
                     $('#lista-agenda').html('<p class="text-center py-10 text-slate-500 text-[10px] font-bold uppercase tracking-widest">Sin eventos</p>');
-
                     $('#agenda-date').html("⚽ AGENDA DEPORTIVA " + fechaTexto.toUpperCase());
-
                     return;
-
                 }
 
                 let html = "";
-
                 partidos.forEach(p => {
-
                     const a = p.atributos || p.attributes || {};
-
                     const hora = a.diary_hour ? a.diary_hour.substring(0, 5) : "--:--";
-
                     const desc = a.diary_description || "";
-
                     const liga = desc.includes(':') ? desc.split(':')[0].trim() : "Evento";
-
                     const titulo = desc.includes(':') ? desc.split(':').pop().trim() : desc;
-
                     
-
                     let finalImgSrc = "";
-
                     let extraClass = "";
-
                     
-
-                    // 1. Prioridad: Champions League
-
                     if (desc.toLowerCase().includes("champions league") || desc.toLowerCase().includes("ucl")) {
-
                         finalImgSrc = "https://static.vecteezy.com/system/resources/previews/010/994/476/non_2x/champions-league-logo-symbol-white-design-football-european-countries-football-teams-illustration-with-black-background-free-vector.jpg";
-
                         extraClass = "logo-special";
-
                     } else {
-
-                        // 2. Buscar País
-
                         const paisNombre = (a.country?.data?.attributes?.name || a.pais?.datos?.atributos?.nombre || "").trim();
-
                         const flagCode = flagMap[paisNombre];
-
-                        
-
                         if (flagCode) {
-
                             finalImgSrc = `https://flagcdn.com/w80/${flagCode}.png`;
-
                         } else {
-
-                            // 3. Fallback: Balón de fútbol si no hay nada
-
                             finalImgSrc = "https://cdn-icons-png.flaticon.com/512/53/53283.png";
-
                             extraClass = "opacity-80 invert"; 
-
                         }
-
                     }
 
                     const canales = (a.embeds && (a.embeds.datos || a.embeds.data)) ? (a.embeds.datos || a.embeds.data) : [];
 
                     html += `
-
                     <div class="match-card bg-slate-900 rounded-xl overflow-hidden shadow-lg mb-3">
-
                         <div class="p-3 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 toggle-btn">
-
                             <div class="flex items-center gap-3">
-
                                 <div class="relative min-w-[44px]">
-
                                     <div class="w-11 h-11 rounded-lg img-container border border-slate-700 shadow-md">
-
                                         <img src="${finalImgSrc}" class="img-event ${extraClass}">
-
                                     </div>
-
                                     <span class="absolute -bottom-1 -right-1 bg-green-600 text-white text-[8px] px-1.5 py-0.5 rounded shadow-xl font-black">${hora}</span>
-
                                 </div>
-
                                 <div class="h-10 w-[1px] bg-slate-800 mx-1"></div>
-
                                 <div>
-
                                     <p class="text-[9px] font-black text-green-500 uppercase tracking-widest leading-none mb-1">${liga}</p>
-
                                     <h2 class="text-[14px] font-bold text-slate-100 uppercase tracking-tight leading-tight">${titulo}</h2>
-
                                 </div>
-
                             </div>
-
                             <svg class="w-5 h-5 text-slate-600 rotate-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-
                         </div>
-
-                        <div class="submenu bg-slate-950/60 border-t border-slate-800/50 p-2.5 grid gap-2">
-
+                        <!-- IMPORTANTE: display: none inline para asegurar que inicie cerrado -->
+                        <div class="submenu bg-slate-950/60 border-t border-slate-800/50 p-2.5 grid gap-2" style="display: none;">
                             ${canales.map(c => {
-
                                 const ca = c.atributos || c.attributes;
-
                                 return `
-
                                 <a href="${prepararEnlace(ca.embed_iframe)}" target="_top" class="flex justify-between items-center bg-slate-800 hover:bg-green-600 p-3 rounded-lg font-bold text-xs group transition-all duration-200">
-
                                     <span class="group-hover:text-white flex items-center gap-2">
-
                                         <span class="text-green-500 group-hover:text-white text-[10px]">▶</span> ${ca.embed_name}
-
                                     </span>
-
                                     <span class="text-[9px] bg-slate-700 px-2 py-1 rounded text-slate-400 uppercase group-hover:bg-green-700 group-hover:text-white">
-
                                         ${ca.idioma || 'HD'}
-
                                     </span>
-
                                 </a>`;
-
                             }).join('')}
-
                         </div>
-
                     </div>`;
-
                 });
 
                 $('#lista-agenda').html(html);
-
                 $('#agenda-date').html("⚽ AGENDA DEPORTIVA " + fechaTexto.toUpperCase());
-
                 $('#proxy-indicator').text("SEÑAL: ONLINE").removeClass('animate-pulse').addClass('text-green-500');
-
             }
 
+            // Manejador de clicks corregido
             $(document).on('click', '.toggle-btn', function() {
+                const card = $(this).closest('.match-card');
+                const submenu = $(this).next('.submenu');
 
-                const card = $(this).parent();
+                // Si se hace click en uno nuevo, cerramos los demás
+                if (!card.hasClass('open')) {
+                    $('.match-card').removeClass('open').find('.submenu').slideUp(200);
+                }
 
-                $('.match-card').not(card).removeClass('open').find('.submenu').slideUp(200);
-
+                // Animamos el actual
                 card.toggleClass('open');
-
-                $(this).next().slideToggle(250);
-
+                submenu.stop(true, true).slideToggle(250);
             });
 
             iniciarCarga();
-
         });
-
     </script>
-
 </body>
-
 </html>
